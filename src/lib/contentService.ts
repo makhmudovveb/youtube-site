@@ -1,7 +1,7 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, increment, setDoc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, increment, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import { db, useFirebase } from './firebase';
 import { mockArticles, mockLessons } from '../data/mockData';
-import type { Article, ContactMessage, Lesson } from '../types';
+import type { Article, ChatMessage, ContactMessage, Lesson } from '../types';
 
 // Единый слой данных: при подключении Firebase CRUD пишет в Firestore,
 // а до этого интерфейс работает с копией локальных mock-данных.
@@ -16,6 +16,19 @@ export async function sendMessage(message: Omit<ContactMessage, 'id' | 'createdA
 export async function getMessages() { if (!useFirebase || !db) return messages; const snap = await getDocs(collection(db, 'messages')); return snap.docs.map(x => ({ id: x.id, ...x.data() } as ContactMessage)); }
 /** Удаление обращения доступно только администратору — это дополнительно защищено Firestore Rules. */
 export async function removeMessage(id: string) { if (!useFirebase || !db) { messages = messages.filter(x => x.id !== id); return; } await deleteDoc(doc(db, 'messages', id)); }
+export async function markMessageRead(id: string) { if (!useFirebase || !db) { messages = messages.map(x => x.id === id ? { ...x, read: true } : x); return; } await updateDoc(doc(db, 'messages', id), { read: true }); }
+
+/** Подписка на Firestore создаёт простой чат в реальном времени без отдельного сервера. */
+export function subscribeToChat(userId: string, callback: (items: ChatMessage[]) => void) {
+  if (!useFirebase || !db) { callback([]); return () => undefined; }
+  const messagesRef = collection(db, 'chats', userId, 'messages');
+  return onSnapshot(query(messagesRef, orderBy('createdAt', 'asc')), snapshot => callback(snapshot.docs.map(x => ({ id: x.id, ...x.data() } as ChatMessage))));
+}
+export async function sendChatMessage(userId: string, message: Omit<ChatMessage, 'id' | 'createdAt'>) {
+  if (!useFirebase || !db) throw new Error('Чат доступен после подключения Firebase.');
+  await setDoc(doc(db, 'chats', userId), { userId, updatedAt: new Date().toISOString() }, { merge: true });
+  await addDoc(collection(db, 'chats', userId, 'messages'), { ...message, createdAt: new Date().toISOString() });
+}
 export async function addView(id: string) { if (!useFirebase || !db) { lessons = lessons.map(x => x.id === id ? { ...x, views: x.views + 1 } : x); return; } await updateDoc(doc(db, 'lessons', id), { views: increment(1) }); }
 export async function saveArticle(item: Article) { if (!useFirebase || !db) { articles = articles.some(x => x.id === item.id) ? articles.map(x => x.id === item.id ? item : x) : [item, ...articles]; return; } const { id, ...data } = item; await setDoc(doc(db, 'articles', id), data, { merge: true }); }
 export async function removeArticle(id: string) { if (!useFirebase || !db) { articles = articles.filter(x => x.id !== id); return; } await deleteDoc(doc(db, 'articles', id)); }

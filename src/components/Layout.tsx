@@ -9,6 +9,7 @@ import {
   UserRound,
   Instagram,
   Send,
+  Youtube,
 } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "../context/AppContext";
@@ -170,6 +171,15 @@ export function Layout() {
                 aria-label="Telegram"
               >
                 <Send size={19} />
+              </a>
+              <a
+                href={site.youtube}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg bg-slate-800 p-3 hover:bg-red-600"
+                aria-label="YouTube"
+              >
+                <Youtube size={20} />
               </a>
             </div>
             {/* <p className="mt-3 text-xs text-slate-500">
