@@ -1,3 +1,186 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Moon, Sun, Menu, X, LogOut, ShieldCheck, UserRound, Instagram, Send } from 'lucide-react'; import { useState } from 'react'; import { useApp } from '../context/AppContext'; import { useAuth } from '../context/AuthContext'; import { site } from '../lib/site';
-export function Layout() { const { lang, setLang, dark, toggleDark, t } = useApp(); const { user, profile, isAdmin, logout } = useAuth(); const [open, setOpen] = useState(false); const links = [['/lessons', t.lessons], ['/articles', t.articles], ['/games', lang === 'ru' ? 'Игры' : 'O‘yinlar'], ['/about', t.about], ['/contacts', t.contacts]]; const name = profile ? `${profile.firstName} ${profile.lastName}`.trim() : user?.displayName; return <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100"><header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3"><Link to="/" className="text-xl font-black text-brand-600">Leniviy <span className="text-slate-900 dark:text-white">Uchitel</span></Link><nav className="hidden gap-4 md:flex">{links.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => isActive ? 'font-semibold text-brand-600' : 'hover:text-brand-600'}>{label}</NavLink>)}</nav><div className="flex items-center gap-2"><button aria-label="Theme" onClick={toggleDark} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">{dark ? <Sun size={18}/> : <Moon size={18}/>}</button><button onClick={() => setLang(lang === 'ru' ? 'uz' : 'ru')} className="rounded-lg border px-2 py-1 text-sm dark:border-slate-700">{lang === 'ru' ? 'UZ' : 'RU'}</button>{user ? <div className="hidden items-center gap-2 sm:flex">{isAdmin && <Link to="/admin" title="Админ-панель" className="rounded-lg bg-brand-50 p-2 text-brand-600 dark:bg-slate-900"><ShieldCheck size={18}/></Link>}<Link to="/profile" className="flex max-w-36 items-center gap-1 truncate text-sm font-semibold text-brand-600"><UserRound size={16}/>{name || user.email}</Link><button onClick={logout} title="Выйти" className="rounded-lg border p-2 dark:border-slate-700"><LogOut size={16}/></button></div> : <Link to="/login" className="hidden rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white sm:block">{t.login}</Link>}<button className="p-2 md:hidden" onClick={() => setOpen(!open)}>{open ? <X/> : <Menu/>}</button></div></div>{open && <nav className="grid gap-3 border-t px-4 py-4 md:hidden">{links.map(([to, label]) => <Link onClick={() => setOpen(false)} key={to} to={to}>{label}</Link>)}{user && <><Link to="/profile">{name || user.email}</Link>{isAdmin && <Link to="/admin">Админ-панель</Link>}<button onClick={logout} className="text-left text-rose-500">{lang === 'ru' ? 'Выйти из аккаунта' : 'Akkauntdan chiqish'}</button></>}</nav>}</header><main><Outlet/></main><footer className="mt-16 bg-slate-900 text-slate-300"><div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 md:grid-cols-3"><div><p className="text-xl font-black text-white">{site.name}</p><p className="mt-3 text-sm leading-6">{lang === 'ru' ? 'Английский язык без перегруза: короткие уроки, практика и немного игры.' : 'Ortiqcha yuklamasdan ingliz tili: qisqa darslar, amaliyot va o‘yinlar.'}</p></div><div><p className="font-bold text-white">{lang === 'ru' ? 'Навигация' : 'Navigatsiya'}</p><div className="mt-3 grid gap-2 text-sm">{links.slice(0, 3).map(([to, label]) => <Link key={to} to={to} className="hover:text-white">{label}</Link>)}</div></div><div><p className="font-bold text-white">{lang === 'ru' ? 'Мы в соцсетях' : 'Ijtimoiy tarmoqlar'}</p><div className="mt-3 flex gap-3"><a href={site.instagram} target="_blank" rel="noreferrer" className="rounded-lg bg-slate-800 p-3 hover:bg-brand-600" aria-label="Instagram"><Instagram size={19}/></a><a href={site.telegram} target="_blank" rel="noreferrer" className="rounded-lg bg-slate-800 p-3 hover:bg-brand-600" aria-label="Telegram"><Send size={19}/></a></div><p className="mt-3 text-xs text-slate-500">Instagram и Telegram можно изменить в src/lib/site.ts</p></div></div><div className="border-t border-slate-800 py-4 text-center text-xs text-slate-500">© {new Date().getFullYear()} {site.name}</div></footer></div>; }
+import { Link, NavLink, Outlet } from "react-router-dom";
+import {
+  Moon,
+  Sun,
+  Menu,
+  X,
+  LogOut,
+  ShieldCheck,
+  UserRound,
+  Instagram,
+  Send,
+} from "lucide-react";
+import { useState } from "react";
+import { useApp } from "../context/AppContext";
+import { useAuth } from "../context/AuthContext";
+import { site } from "../lib/site";
+export function Layout() {
+  const { lang, setLang, dark, toggleDark, t } = useApp();
+  const { user, profile, isAdmin, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  const links = [
+    ["/lessons", t.lessons],
+    ["/articles", t.articles],
+    ["/games", lang === "ru" ? "Игры" : "O‘yinlar"],
+    ["/about", t.about],
+    ["/contacts", t.contacts],
+  ];
+  const name = profile
+    ? `${profile.firstName} ${profile.lastName}`.trim()
+    : user?.displayName;
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
+      <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <Link to="/" className="text-xl font-black text-brand-600">
+            Leniviy{" "}
+            <span className="text-slate-900 dark:text-white">Uchitel</span>
+          </Link>
+          <nav className="hidden gap-4 md:flex">
+            {links.map(([to, label]) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  isActive
+                    ? "font-semibold text-brand-600"
+                    : "hover:text-brand-600"
+                }
+              >
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="flex items-center gap-2">
+            <button
+              aria-label="Theme"
+              onClick={toggleDark}
+              className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              {dark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              onClick={() => setLang(lang === "ru" ? "uz" : "ru")}
+              className="rounded-lg border px-2 py-1 text-sm dark:border-slate-700"
+            >
+              {lang === "ru" ? "UZ" : "RU"}
+            </button>
+            {user ? (
+              <div className="hidden items-center gap-2 sm:flex">
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    title="Админ-панель"
+                    className="rounded-lg bg-brand-50 p-2 text-brand-600 dark:bg-slate-900"
+                  >
+                    <ShieldCheck size={18} />
+                  </Link>
+                )}
+                <Link
+                  to="/profile"
+                  className="flex max-w-36 items-center gap-1 truncate text-sm font-semibold text-brand-600"
+                >
+                  <UserRound size={16} />
+                  {name || user.email}
+                </Link>
+                <button
+                  onClick={logout}
+                  title="Выйти"
+                  className="rounded-lg border p-2 dark:border-slate-700"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="hidden rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white sm:block"
+              >
+                {t.login}
+              </Link>
+            )}
+            <button className="p-2 md:hidden" onClick={() => setOpen(!open)}>
+              {open ? <X /> : <Menu />}
+            </button>
+          </div>
+        </div>
+        {open && (
+          <nav className="grid gap-3 border-t px-4 py-4 md:hidden">
+            {links.map(([to, label]) => (
+              <Link onClick={() => setOpen(false)} key={to} to={to}>
+                {label}
+              </Link>
+            ))}
+            {user && (
+              <>
+                <Link to="/profile">{name || user.email}</Link>
+                {isAdmin && <Link to="/admin">Админ-панель</Link>}
+                <button onClick={logout} className="text-left text-rose-500">
+                  {lang === "ru" ? "Выйти из аккаунта" : "Akkauntdan chiqish"}
+                </button>
+              </>
+            )}
+          </nav>
+        )}
+      </header>
+      <main>
+        <Outlet />
+      </main>
+      <footer className="mt-16 bg-slate-900 text-slate-300">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 md:grid-cols-3">
+          <div>
+            <p className="text-xl font-black text-white">{site.name}</p>
+            <p className="mt-3 text-sm leading-6">
+              {lang === "ru"
+                ? "Английский язык без перегруза: короткие уроки, практика и немного игры."
+                : "Ortiqcha yuklamasdan ingliz tili: qisqa darslar, amaliyot va o‘yinlar."}
+            </p>
+          </div>
+          <div>
+            <p className="font-bold text-white">
+              {lang === "ru" ? "Навигация" : "Navigatsiya"}
+            </p>
+            <div className="mt-3 grid gap-2 text-sm">
+              {links.slice(0, 3).map(([to, label]) => (
+                <Link key={to} to={to} className="hover:text-white">
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="font-bold text-white">
+              {lang === "ru" ? "Мы в соцсетях" : "Ijtimoiy tarmoqlar"}
+            </p>
+            <div className="mt-3 flex gap-3">
+              <a
+                href={site.instagram}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg bg-slate-800 p-3 hover:bg-brand-600"
+                aria-label="Instagram"
+              >
+                <Instagram size={19} />
+              </a>
+              <a
+                href={site.telegram}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg bg-slate-800 p-3 hover:bg-brand-600"
+                aria-label="Telegram"
+              >
+                <Send size={19} />
+              </a>
+            </div>
+            {/* <p className="mt-3 text-xs text-slate-500">
+              Instagram и Telegram можно изменить в src/lib/site.ts
+            </p> */}
+          </div>
+        </div>
+        <div className="border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+          © {new Date().getFullYear()} {site.name}
+        </div>
+      </footer>
+    </div>
+  );
+}
