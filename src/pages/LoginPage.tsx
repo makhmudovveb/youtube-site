@@ -91,14 +91,14 @@ export default function LoginPage() {
                 {...register("birthYear")}
               />
             </label>
-            {/* <Input
+            <Input
               label="Telegram (необязательно)"
               placeholder="@username"
-              className="col-span-2"
+              className="col-span-2 mt-1 w-full rounded-xl border bg-transparent p-3 dark:border-slate-700"
               {...register("telegram")}
             />
           </div>
-        )} */}
+        )}
         <label className="mt-5 block text-sm">
           Email
           <input
