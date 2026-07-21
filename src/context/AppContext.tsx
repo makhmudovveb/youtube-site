@@ -1,0 +1,9 @@
+import { createContext, useContext, useEffect, useState } from 'react';
+import type { Lang } from '../types';
+const copy = { ru: { lessons: 'Уроки', articles: 'Статьи', about: 'Обо мне', contacts: 'Контакты', login: 'Войти', favorite: 'Избранное', start: 'Начать учиться', allLessons: 'Все уроки', send: 'Отправить', admin: 'Админ-панель' }, uz: { lessons: 'Darslar', articles: 'Maqolalar', about: 'Men haqimda', contacts: 'Aloqa', login: 'Kirish', favorite: 'Sevimlilar', start: 'O‘rganishni boshlash', allLessons: 'Barcha darslar', send: 'Yuborish', admin: 'Admin paneli' } };
+type Context = { lang: Lang; setLang: (lang: Lang) => void; dark: boolean; toggleDark: () => void; t: typeof copy.ru; favorites: string[]; toggleFavorite: (id: string) => void; };
+const AppContext = createContext<Context | null>(null);
+export function AppProvider({ children }: { children: React.ReactNode }) { const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('lang') as Lang) || 'ru'); const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark'); const [favorites, setFavorites] = useState<string[]>(() => JSON.parse(localStorage.getItem('favorites') || '[]'));
+ useEffect(() => { document.documentElement.classList.toggle('dark', dark); localStorage.setItem('theme', dark ? 'dark' : 'light'); }, [dark]); useEffect(() => localStorage.setItem('lang', lang), [lang]); useEffect(() => localStorage.setItem('favorites', JSON.stringify(favorites)), [favorites]);
+ return <AppContext.Provider value={{ lang, setLang, dark, toggleDark: () => setDark(x => !x), t: copy[lang], favorites, toggleFavorite: id => setFavorites(x => x.includes(id) ? x.filter(i => i !== id) : [...x, id]) }}>{children}</AppContext.Provider>; }
+export const useApp = () => { const value = useContext(AppContext); if (!value) throw new Error('AppProvider is required'); return value; };
