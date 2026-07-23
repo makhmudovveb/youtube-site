@@ -1,3 +1,85 @@
-import { Navigate } from 'react-router-dom'; import { CalendarDays, Mail, ShieldCheck, UserRound, Send } from 'lucide-react'; import { useAuth } from '../context/AuthContext'; import { Seo } from '../components/Seo';
-export default function ProfilePage() { const { user, profile, isAdmin, loading } = useAuth(); if (loading) return <div className="p-10">Loading…</div>; if (!user) return <Navigate to="/login" replace/>; const name = profile ? `${profile.firstName} ${profile.lastName}`.trim() : user.displayName || 'User'; return <section className="mx-auto max-w-2xl px-4 py-12"><Seo title="Профиль" description="Профиль пользователя Leniviy Uchitel."/><div className="overflow-hidden rounded-3xl bg-white shadow-soft dark:bg-slate-900"><div className="h-28 bg-gradient-to-r from-brand-600 to-sky-400"/><div className="px-7 pb-7"><div className="-mt-12 flex h-24 w-24 items-center justify-center rounded-3xl border-4 border-white bg-brand-50 text-brand-600 shadow dark:border-slate-900"><UserRound size={44}/></div><div className="mt-4 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-black">{name}</h1><span className={'rounded-full px-3 py-1 text-xs font-bold ' + (isAdmin ? 'bg-amber-100 text-amber-800' : 'bg-brand-50 text-brand-600')}>{isAdmin ? 'ADMIN' : 'USER'}</span></div><p className="mt-1 text-slate-500">{user.email}</p><div className="mt-7 grid gap-3 sm:grid-cols-2"><Info icon={<Mail size={18}/>} label="Email" value={user.email || '—'}/><Info icon={<CalendarDays size={18}/>} label="Год рождения" value={profile?.birthYear ? String(profile.birthYear) : 'Не указан'}/><Info icon={<Send size={18}/>} label="Telegram" value={profile?.telegram ? `@${profile.telegram}` : 'Не указан'}/><Info icon={<ShieldCheck size={18}/>} label="Роль" value={isAdmin ? 'Администратор' : 'Пользователь'}/></div></div></div></section>; }
-function Info({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) { return <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800"><span className="text-brand-600">{icon}</span><div><p className="text-xs text-slate-500">{label}</p><p className="font-semibold">{value}</p></div></div>; }
+import { Navigate } from "react-router-dom";
+import { CalendarDays, Mail, ShieldCheck, UserRound, Send } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { Seo } from "../components/Seo";
+export default function ProfilePage() {
+  const { user, profile, isAdmin, loading } = useAuth();
+  if (loading) return <div className="p-10">Loading…</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  const name = profile
+    ? `${profile.firstName} ${profile.lastName}`.trim()
+    : user.displayName || "User";
+  return (
+    <section className="mx-auto max-w-2xl px-4 py-12">
+      <Seo
+        title="Профиль"
+        description="Профиль пользователя Leniviy Uchitel."
+      />
+      <div className="overflow-hidden rounded-3xl bg-white shadow-soft dark:bg-slate-900">
+        <div className="h-28 bg-gradient-to-r from-brand-600 to-sky-400" />
+        <div className="px-7 pb-7">
+          <div className="-mt-12 flex h-24 w-24 items-center justify-center rounded-3xl border-4 border-white bg-brand-50 text-brand-600 shadow dark:border-slate-900">
+            <UserRound size={44} />
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-black">{name}</h1>
+            <span
+              className={
+                "rounded-full px-3 py-1 text-xs font-bold " +
+                (isAdmin
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-brand-50 text-brand-600")
+              }
+            >
+              {isAdmin ? "ADMIN" : "USER"}
+            </span>
+          </div>
+          <p className="mt-1 text-slate-500">{user.email}</p>
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <Info
+              icon={<Mail size={18} />}
+              label="Email"
+              value={user.email || "—"}
+            />
+            <Info
+              icon={<CalendarDays size={18} />}
+              label="Год рождения"
+              value={
+                profile?.birthYear ? String(profile.birthYear) : "Не указан"
+              }
+            />
+            <Info
+              icon={<Send size={18} />}
+              label="Telegram"
+              value={profile?.telegram ? `@${profile.telegram}` : "Не указан"}
+            />
+            <Info
+              icon={<ShieldCheck size={18} />}
+              label="Роль"
+              value={isAdmin ? "Администратор" : "Пользователь"}
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+function Info({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800">
+      <span className="text-brand-600">{icon}</span>
+      <div>
+        <p className="text-xs text-slate-500">{label}</p>
+        <p className="font-semibold">{value}</p>
+      </div>
+    </div>
+  );
+}
