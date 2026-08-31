@@ -86,7 +86,7 @@ export default function LoginPage() {
             <label className="col-span-2 text-sm">
               {lang === "ru" ? "Год рождения" : "Tug‘ilgan yil"}
               <input
-                type="number"
+                type="date"
                 className="mt-1 w-full rounded-xl border bg-transparent p-3 dark:border-slate-700"
                 {...register("birthYear")}
               />

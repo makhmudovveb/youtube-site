@@ -1,5 +1,5 @@
-import { Navigate } from "react-router-dom";
-import { CalendarDays, Mail, ShieldCheck, UserRound, Send } from "lucide-react";
+import { Link, Navigate } from "react-router-dom";
+import { CalendarDays, Mail, ShieldCheck, UserRound, Send, MessageCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Seo } from "../components/Seo";
 export default function ProfilePage() {
@@ -59,6 +59,13 @@ export default function ProfilePage() {
               value={isAdmin ? "Администратор" : "Пользователь"}
             />
           </div>
+          <Link
+            to="/chat"
+            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white"
+          >
+            <MessageCircle size={19} />
+            Чат с преподавателем
+          </Link>
         </div>
       </div>
     </section>
