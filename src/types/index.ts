@@ -4,4 +4,5 @@ export interface Lesson { id: string; title: Record<Lang, string>; description: 
 export interface Article { id: string; title: Record<Lang, string>; excerpt: Record<Lang, string>; content: Record<Lang, string>; image: string; tags: string[]; createdAt: string; }
 export interface Comment { id: string; lessonId: string; author: string; text: string; createdAt: string; }
 export interface ContactMessage { id: string; name: string; email: string; message: string; createdAt: string; read: boolean; userId?: string; }
-export interface ChatMessage { id: string; senderId: string; senderName: string; text: string; createdAt: string; }
+/** sourceContactId связывает первое сообщение чата с конкретным обращением. */
+export interface ChatMessage { id: string; senderId: string; senderName: string; text: string; createdAt: string; sourceContactId?: string; }

@@ -1,18 +1,40 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, increment, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, increment, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db, useFirebase } from './firebase';
 import { mockArticles, mockLessons } from '../data/mockData';
 import type { Article, ChatMessage, ContactMessage, Lesson } from '../types';
 
 // Единый слой данных: при подключении Firebase CRUD пишет в Firestore,
 // а до этого интерфейс работает с копией локальных mock-данных.
-let lessons = [...mockLessons]; let articles = [...mockArticles]; let messages: ContactMessage[] = [];
+let lessons = [...mockLessons]; let articles = [...mockArticles]; let messages: ContactMessage[] = []; const localChats = new Map<string, ChatMessage[]>();
 export async function getLessons() { if (!useFirebase || !db) return lessons; const snap = await getDocs(collection(db, 'lessons')); return snap.docs.map(x => ({ id: x.id, ...x.data() } as Lesson)); }
 export async function getArticles() { if (!useFirebase || !db) return articles; const snap = await getDocs(collection(db, 'articles')); return snap.docs.map(x => ({ id: x.id, ...x.data() } as Article)); }
 // setDoc с merge создаёт новый документ и обновляет существующий. Это исправляет
 // ошибку "No document to update" при первом сохранении урока или статьи.
 export async function saveLesson(item: Lesson) { if (!useFirebase || !db) { lessons = lessons.some(x => x.id === item.id) ? lessons.map(x => x.id === item.id ? item : x) : [item, ...lessons]; return; } const { id, ...data } = item; await setDoc(doc(db, 'lessons', id), data, { merge: true }); }
 export async function removeLesson(id: string) { if (!useFirebase || !db) { lessons = lessons.filter(x => x.id !== id); return; } await deleteDoc(doc(db, 'lessons', id)); }
-export async function sendMessage(message: Omit<ContactMessage, 'id' | 'createdAt' | 'read'>) { const item = { ...message, createdAt: new Date().toISOString(), read: false }; if (!useFirebase || !db) { messages = [{ id: crypto.randomUUID(), ...item }, ...messages]; return; } await addDoc(collection(db, 'messages'), item); }
+/**
+ * Контактное обращение авторизованного человека одновременно становится первым
+ * сообщением его единственного чата. Ключ чата — Firebase UID, не id обращения.
+ */
+export async function sendMessage(message: Omit<ContactMessage, 'id' | 'createdAt' | 'read'>) {
+  // Firestore не принимает undefined, поэтому для гостя поле userId не пишем вовсе.
+  const { userId, ...contactData } = message;
+  const item = { ...contactData, ...(userId ? { userId } : {}), createdAt: new Date().toISOString(), read: false };
+  if (!useFirebase || !db) {
+    const id = crypto.randomUUID();
+    messages = [{ id, ...item }, ...messages];
+    if (userId) {
+      localChats.set(userId, [...(localChats.get(userId) || []), { id: crypto.randomUUID(), senderId: userId, senderName: message.name, text: message.message, createdAt: item.createdAt, sourceContactId: id }]);
+    }
+    return;
+  }
+  // Сначала получаем ID обращения. Он не позволит продублировать его при миграции старых чатов.
+  const contactRef = await addDoc(collection(db, 'messages'), item);
+  if (userId) {
+    await setDoc(doc(db, 'chats', userId), { userId, participantName: message.name, participantEmail: message.email, updatedAt: item.createdAt }, { merge: true });
+    await addDoc(collection(db, 'chats', userId, 'messages'), { senderId: userId, senderName: message.name, text: message.message, createdAt: item.createdAt, sourceContactId: contactRef.id });
+  }
+}
 export async function getMessages() { if (!useFirebase || !db) return messages; const snap = await getDocs(collection(db, 'messages')); return snap.docs.map(x => ({ id: x.id, ...x.data() } as ContactMessage)); }
 /** Удаление обращения доступно только администратору — это дополнительно защищено Firestore Rules. */
 export async function removeMessage(id: string) { if (!useFirebase || !db) { messages = messages.filter(x => x.id !== id); return; } await deleteDoc(doc(db, 'messages', id)); }
@@ -20,13 +42,33 @@ export async function markMessageRead(id: string) { if (!useFirebase || !db) { m
 
 /** Читаем сообщения отдельно: polling устойчивее realtime-слушателя в SPA/Vercel. */
 export async function getChatMessages(userId: string): Promise<ChatMessage[]> {
-  if (!useFirebase || !db) return [];
+  if (!useFirebase || !db) return localChats.get(userId) || [];
   const messagesRef = collection(db, 'chats', userId, 'messages');
   const snapshot = await getDocs(query(messagesRef, orderBy('createdAt', 'asc')));
   return snapshot.docs.map(x => ({ id: x.id, ...x.data() } as ChatMessage));
 }
+
+/**
+ * Переносит старые обращения авторизованного ученика в его один чат.
+ * Вызывается только админом перед открытием диалога. ID обращения хранится
+ * в sourceContactId, поэтому повторное открытие чата ничего не дублирует.
+ */
+export async function syncContactMessagesToChat(userId: string) {
+  if (!useFirebase || !db) return;
+  const contacts = await getDocs(query(collection(db, 'messages'), where('userId', '==', userId)));
+  if (contacts.empty) return;
+  const existing = await getChatMessages(userId);
+  const imported = new Set(existing.map(item => item.sourceContactId).filter(Boolean));
+  const first = contacts.docs[0].data() as Omit<ContactMessage, 'id'>;
+  await setDoc(doc(db, 'chats', userId), { userId, participantName: first.name, participantEmail: first.email, updatedAt: new Date().toISOString() }, { merge: true });
+  for (const contact of contacts.docs) {
+    if (imported.has(contact.id)) continue;
+    const data = contact.data() as Omit<ContactMessage, 'id'>;
+    await addDoc(collection(db, 'chats', userId, 'messages'), { senderId: userId, senderName: data.name, text: data.message, createdAt: data.createdAt, sourceContactId: contact.id });
+  }
+}
 export async function sendChatMessage(userId: string, message: Omit<ChatMessage, 'id' | 'createdAt'>) {
-  if (!useFirebase || !db) throw new Error('Чат доступен после подключения Firebase.');
+  if (!useFirebase || !db) { localChats.set(userId, [...(localChats.get(userId) || []), { id: crypto.randomUUID(), ...message, createdAt: new Date().toISOString() }]); return; }
   await setDoc(doc(db, 'chats', userId), { userId, updatedAt: new Date().toISOString() }, { merge: true });
   await addDoc(collection(db, 'chats', userId, 'messages'), { ...message, createdAt: new Date().toISOString() });
 }

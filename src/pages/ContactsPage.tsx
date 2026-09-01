@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Instagram, Send } from "lucide-react";
+import { Link } from "react-router-dom";
 import { sendMessage } from "../lib/contentService";
 import { Seo } from "../components/Seo";
 import { useApp } from "../context/AppContext";
@@ -80,6 +81,15 @@ export default function ContactsPage() {
         onSubmit={handleSubmit(onSubmit)}
         className="rounded-2xl bg-white p-6 shadow-soft dark:bg-slate-900"
       >
+        {!user && (
+          <p className="mb-4 rounded-xl bg-brand-50 p-3 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            {lang === "ru" ? "Чтобы продолжить переписку в личном чате, " : "Shaxsiy chatda yozishni davom ettirish uchun "}
+            <Link to="/login" className="font-bold text-brand-600 underline">
+              {lang === "ru" ? "войдите в аккаунт" : "akkauntga kiring"}
+            </Link>
+            {lang === "ru" ? "." : "."}
+          </p>
+        )}
         <Field
           label={lang === "ru" ? "Имя" : "Ism"}
           error={errors.name?.message}

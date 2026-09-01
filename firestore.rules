@@ -10,7 +10,9 @@ service cloud.firestore {
       allow update: if isAdmin() || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']) && request.resource.data.views == resource.data.views + 1);
     }
     match /articles/{id} { allow read: if true; allow write: if isAdmin(); }
-    match /messages/{id} { allow create: if true; allow read, update, delete: if isAdmin(); }
+    // Гость может оставить обращение, но назначать userId разрешено только
+    // владельцу этого Firebase-аккаунта. Это исключает подмену чужого чата.
+    match /messages/{id} { allow create: if !('userId' in request.resource.data) || (request.auth != null && request.resource.data.userId == request.auth.uid); allow read, update, delete: if isAdmin(); }
     match /chats/{userId} {
       allow read, create, update: if request.auth != null && (request.auth.uid == userId || isAdmin());
       match /messages/{messageId} {
