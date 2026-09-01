@@ -22,12 +22,19 @@ export default function ContactsPage() {
     reset,
   } = useForm<Form>({ resolver: zodResolver(schema) });
   const [sent, setSent] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const { lang, t } = useApp();
   const { user } = useAuth();
   const onSubmit = async (data: Form) => {
-    await sendMessage({ ...data, userId: user?.uid });
-    reset();
-    setSent(true);
+    try {
+      setSent(false);
+      setSubmitError("");
+      await sendMessage({ ...data, userId: user?.uid });
+      reset();
+      setSent(true);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Не удалось отправить сообщение.");
+    }
   };
   return (
     <section className="mx-auto grid max-w-5xl gap-10 px-4 py-14 md:grid-cols-2">
@@ -77,27 +84,28 @@ export default function ContactsPage() {
           label={lang === "ru" ? "Имя" : "Ism"}
           error={errors.name?.message}
         >
-          <input {...register("name")} />
+          <input disabled={isSubmitting || sent} {...register("name")} />
         </Field>
         <Field label="Email" error={errors.email?.message}>
-          <input {...register("email")} type="email" />
+          <input disabled={isSubmitting || sent} {...register("email")} type="email" />
         </Field>
         <Field
           label={lang === "ru" ? "Сообщение" : "Xabar"}
           error={errors.message?.message}
         >
-          <textarea {...register("message")} rows={5} />
+          <textarea disabled={isSubmitting || sent} {...register("message")} rows={5} />
         </Field>
         {sent && (
           <p className="mb-3 text-green-600">
             {lang === "ru" ? "Сообщение отправлено!" : "Xabar yuborildi!"}
           </p>
         )}
+        {submitError && <p role="alert" className="mb-3 text-rose-600">{submitError}</p>}
         <button
-          disabled={isSubmitting}
-          className="w-full rounded-xl bg-brand-600 py-3 font-bold text-white"
+          disabled={isSubmitting || sent}
+          className="w-full rounded-xl bg-brand-600 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {t.send}
+          {isSubmitting ? (lang === "ru" ? "Отправляем…" : "Yuborilmoqda…") : sent ? (lang === "ru" ? "Отправлено ✓" : "Yuborildi ✓") : t.send}
         </button>
       </form>
     </section>
