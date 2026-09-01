@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, increment, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, increment, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import { db, useFirebase } from './firebase';
 import { mockArticles, mockLessons } from '../data/mockData';
 import type { Article, ChatMessage, ContactMessage, Lesson } from '../types';
@@ -18,11 +18,12 @@ export async function getMessages() { if (!useFirebase || !db) return messages; 
 export async function removeMessage(id: string) { if (!useFirebase || !db) { messages = messages.filter(x => x.id !== id); return; } await deleteDoc(doc(db, 'messages', id)); }
 export async function markMessageRead(id: string) { if (!useFirebase || !db) { messages = messages.map(x => x.id === id ? { ...x, read: true } : x); return; } await updateDoc(doc(db, 'messages', id), { read: true }); }
 
-/** Подписка на Firestore создаёт простой чат в реальном времени без отдельного сервера. */
-export function subscribeToChat(userId: string, callback: (items: ChatMessage[]) => void, onError?: (error: Error) => void): () => void {
-  if (!useFirebase || !db) { callback([]); return () => {}; }
+/** Читаем сообщения отдельно: polling устойчивее realtime-слушателя в SPA/Vercel. */
+export async function getChatMessages(userId: string): Promise<ChatMessage[]> {
+  if (!useFirebase || !db) return [];
   const messagesRef = collection(db, 'chats', userId, 'messages');
-  return onSnapshot(query(messagesRef, orderBy('createdAt', 'asc')), snapshot => callback(snapshot.docs.map(x => ({ id: x.id, ...x.data() } as ChatMessage))), error => onError?.(error));
+  const snapshot = await getDocs(query(messagesRef, orderBy('createdAt', 'asc')));
+  return snapshot.docs.map(x => ({ id: x.id, ...x.data() } as ChatMessage));
 }
 export async function sendChatMessage(userId: string, message: Omit<ChatMessage, 'id' | 'createdAt'>) {
   if (!useFirebase || !db) throw new Error('Чат доступен после подключения Firebase.');

@@ -1,135 +1,22 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
-import { Send, MessageCircle, ArrowLeft } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import { subscribeToChat, sendChatMessage } from "../lib/contentService";
-import type { ChatMessage } from "../types";
-import { Seo } from "../components/Seo";
-import { PageLoader } from "../components/PageLoader";
-/** Один диалог на пользователя: пользователь открывает /chat, админ — /admin/chats/:userId. */
-export default function ChatPage({
-  adminMode = false,
-}: {
-  adminMode?: boolean;
-}) {
-  const { user, profile, isAdmin, loading } = useAuth();
-  const { userId } = useParams();
-  const chatUserId = adminMode ? userId : user?.uid;
-  const [items, setItems] = useState<ChatMessage[]>([]);
-  const [text, setText] = useState("");
-  const [error, setError] = useState("");
-  const [sending, setSending] = useState(false);
-  const bottom = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    // Всегда возвращаем функцию cleanup: React не получит undefined/Promise.
-    let unsubscribe = () => {};
-    if (chatUserId) unsubscribe = subscribeToChat(chatUserId, setItems, (reason) => setError(reason.message));
-    return () => unsubscribe();
-  }, [chatUserId]);
-  useEffect(
-    () => bottom.current?.scrollIntoView({ behavior: "smooth" }),
-    [items],
-  );
-  if (loading) return <PageLoader label="Загружаем чат…" />;
-  if (!user || (adminMode && !isAdmin) || !chatUserId)
-    return <Navigate to="/" replace />;
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!text.trim()) return;
-    try {
-      setSending(true);
-      setError("");
-      await sendChatMessage(chatUserId, {
-        senderId: user.uid,
-        senderName: profile
-          ? `${profile.firstName} ${profile.lastName}`.trim()
-          : user.displayName || user.email || "User",
-        text: text.trim(),
-      });
-      setText("");
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Не удалось отправить сообщение.",
-      );
-    } finally { setSending(false); }
-  };
-  return (
-    <section className="mx-auto max-w-3xl px-4 py-10">
-      <Seo title="Чат" description="Диалог с преподавателем." />
-      <Link
-        to={adminMode ? "/admin" : "/profile"}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-600"
-      >
-        <ArrowLeft size={16} />
-        {adminMode ? "К админ-панели" : "К профилю"}
-      </Link>
-      <div className="mt-4 overflow-hidden rounded-3xl bg-white shadow-soft dark:bg-slate-900">
-        <div className="flex items-center gap-3 border-b p-5 dark:border-slate-800">
-          <div className="rounded-xl bg-brand-50 p-2 text-brand-600">
-            <MessageCircle />
-          </div>
-          <div>
-            <h1 className="font-bold">
-              {adminMode ? "Чат с учеником" : "Чат с преподавателем"}
-            </h1>
-            <p className="text-sm text-slate-500">
-              Сообщения обновляются автоматически
-            </p>
-          </div>
-        </div>
-        <div className="h-[420px] space-y-3 overflow-y-auto bg-slate-50 p-5 dark:bg-slate-950">
-          {items.length ? (
-            items.map((item) => {
-              const own = item.senderId === user.uid;
-              return (
-                <div
-                  key={item.id}
-                  className={"flex " + (own ? "justify-end" : "justify-start")}
-                >
-                  <div
-                    className={
-                      "max-w-[80%] rounded-2xl px-4 py-3 " +
-                      (own
-                        ? "bg-brand-600 text-white"
-                        : "bg-white shadow-sm dark:bg-slate-800")
-                    }
-                  >
-                    <p className="text-xs font-bold opacity-75">
-                      {item.senderName}
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap">{item.text}</p>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="pt-20 text-center text-slate-400">
-              Начните диалог — первое сообщение появится здесь.
-            </p>
-          )}
-          <div ref={bottom} />
-        </div>
-        <form onSubmit={submit} className="border-t p-4 dark:border-slate-800">
-          <div className="flex gap-2">
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              disabled={sending}
-              maxLength={2000}
-              className="min-w-0 flex-1 rounded-xl border bg-transparent px-4 py-3 dark:border-slate-700"
-              placeholder="Напишите сообщение…"
-            />
-            <button
-              disabled={sending || !text.trim()}
-              aria-label="Отправить"
-              className="rounded-xl bg-brand-600 px-4 text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {sending ? <span className="text-xs">…</span> : <Send size={19} />}
-            </button>
-          </div>
-          {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
-        </form>
-      </div>
-    </section>
-  );
+import { useEffect, useRef, useState } from 'react';
+import { Link, Navigate, useParams } from 'react-router-dom';
+import { ArrowLeft, MessageCircle, RefreshCw, Send } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getChatMessages, sendChatMessage } from '../lib/contentService';
+import type { ChatMessage } from '../types';
+import { Seo } from '../components/Seo';
+import { PageLoader } from '../components/PageLoader';
+
+/** Небольшой чат с ручным обновлением: без onSnapshot и callback-cleanup Firebase. */
+export default function ChatPage({ adminMode = false }: { adminMode?: boolean }) {
+  const { user, profile, isAdmin, loading } = useAuth(); const { userId } = useParams(); const chatUserId = adminMode ? userId : user?.uid;
+  const [items, setItems] = useState<ChatMessage[]>([]); const [text, setText] = useState(''); const [error, setError] = useState(''); const [sending, setSending] = useState(false); const [refreshing, setRefreshing] = useState(false); const bottom = useRef<HTMLDivElement>(null);
+  const loadMessages = async () => { if (!chatUserId) return; try { setRefreshing(true); setError(''); setItems(await getChatMessages(chatUserId)); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить чат.'); } finally { setRefreshing(false); } };
+  // Возвращать из этого effect нечего: это исключает ошибку "n is not a function".
+  useEffect(() => { void loadMessages(); }, [chatUserId]);
+  useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth' }); }, [items]);
+  if (loading) return <PageLoader label="Загружаем чат…"/>;
+  if (!user || (adminMode && !isAdmin) || !chatUserId) return <Navigate to="/" replace/>;
+  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (!text.trim() || sending) return; try { setSending(true); setError(''); await sendChatMessage(chatUserId, { senderId: user.uid, senderName: profile ? `${profile.firstName} ${profile.lastName}`.trim() : user.displayName || user.email || 'User', text: text.trim() }); setText(''); await loadMessages(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось отправить сообщение.'); } finally { setSending(false); } };
+  return <section className="mx-auto max-w-3xl px-4 py-10"><Seo title="Чат" description="Диалог с преподавателем."/><Link to={adminMode ? '/admin' : '/profile'} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-600"><ArrowLeft size={16}/>{adminMode ? 'К админ-панели' : 'К профилю'}</Link><div className="mt-4 overflow-hidden rounded-3xl bg-white shadow-soft dark:bg-slate-900"><div className="flex items-center gap-3 border-b p-5 dark:border-slate-800"><div className="rounded-xl bg-brand-50 p-2 text-brand-600"><MessageCircle/></div><div><h1 className="font-bold">{adminMode ? 'Чат с учеником' : 'Чат с преподавателем'}</h1><p className="text-sm text-slate-500">Обновляйте диалог кнопкой справа</p></div><button type="button" disabled={refreshing} onClick={() => void loadMessages()} aria-label="Обновить чат" title="Обновить чат" className="ml-auto rounded-xl p-2 text-brand-600 hover:bg-brand-50 disabled:opacity-50"><RefreshCw className={refreshing ? 'animate-spin' : ''} size={18}/></button></div><div className="h-[420px] space-y-3 overflow-y-auto bg-slate-50 p-5 dark:bg-slate-950">{items.length ? items.map(item => { const own = item.senderId === user.uid; return <div key={item.id} className={'flex ' + (own ? 'justify-end' : 'justify-start')}><div className={'max-w-[80%] rounded-2xl px-4 py-3 ' + (own ? 'bg-brand-600 text-white' : 'bg-white shadow-sm dark:bg-slate-800')}><p className="text-xs font-bold opacity-75">{item.senderName}</p><p className="mt-1 whitespace-pre-wrap">{item.text}</p></div></div>; }) : <p className="pt-20 text-center text-slate-400">Начните диалог — первое сообщение появится здесь.</p>}<div ref={bottom}/></div><form onSubmit={submit} className="border-t p-4 dark:border-slate-800"><div className="flex gap-2"><input value={text} onChange={e => setText(e.target.value)} disabled={sending} maxLength={2000} className="min-w-0 flex-1 rounded-xl border bg-transparent px-4 py-3 dark:border-slate-700" placeholder="Напишите сообщение…"/><button disabled={sending || !text.trim()} aria-label="Отправить" className="rounded-xl bg-brand-600 px-4 text-white disabled:cursor-not-allowed disabled:opacity-50">{sending ? <span className="text-xs">…</span> : <Send size={19}/>}</button></div>{error && <p role="alert" className="mt-2 text-sm text-rose-500">{error}</p>}</form></div></section>;
 }
